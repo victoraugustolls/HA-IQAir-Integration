@@ -1,0 +1,935 @@
+[
+  {
+    "id": "ui2_000000000000000000000001",
+    "serialNumber": "<redacted>",
+    "name": "Primary Bedroom",
+    "type": "device",
+    "registrationNumber": "<redacted>",
+    "model": "ui2",
+    "modelLabel": "HealthPro Plus",
+    "modelSeries": "HealthPro Series",
+    "modelVariation": "HP250XE",
+    "featureSet": {
+      "isHavingPmSensor": 1,
+      "isHavingVocTvocSensor": 0,
+      "isHavingHchoSenser": 0,
+      "isHavingCo2Sensor": 0,
+      "isAutoModeSupported": 1,
+      "isLocalAutoModeSupported": 1,
+      "isHavingTemperatureSensor": 0,
+      "isHavingHumiditySensor": 0,
+      "isFanSpeedControlInPercent": 0,
+      "isHavingLocalUserInterface": 1,
+      "isHavingEthernet": 0,
+      "isOutsideTargetRoom": 0
+    },
+    "isIndoor": true,
+    "isPublic": false,
+    "isConnected": true,
+    "lastSeenAt": "2026-11-14T22:08:39.000Z",
+    "brand": "iqair",
+    "connectivity": {
+      "type": "wifi",
+      "percentage": 80,
+      "wifiApSsid": "<redacted>",
+      "ipAddress": "<redacted>",
+      "macAddress": "<redacted>"
+    },
+    "shareCode": "<redacted>",
+    "timezone": "Etc/UTC",
+    "registrationDate": "2026-11-14T20:02:29.513Z",
+    "slots": [
+      {
+        "slot": 1,
+        "hasSensor": true,
+        "pollutant": "PM sensor module",
+        "module": "pm",
+        "alerts": [],
+        "shopLink": "/products/accessories-replacement-parts/pm-sensor-module-1"
+      }
+    ],
+    "performance": {
+      "cleanAirDeliveryRate": 0.1,
+      "cleanAirDeliveryRatePercent": 98,
+      "totCumAirVolume": 11669.2,
+      "totTimeFanRun": "4 months"
+    },
+    "remote": {
+      "powerMode": 2,
+      "speedPercent": 98,
+      "autoModeEnabled": false,
+      "lightIndicatorEnabled": true,
+      "isLocksEnabled": false,
+      "manSpeedTable": [
+        22,
+        37,
+        52,
+        62,
+        71,
+        98
+      ],
+      "uiStepwiseManMode": false,
+      "autoModeProfile": 3,
+      "speedLevel": 6,
+      "maxSpeedLevel": 6,
+      "calendarRunning": false,
+      "modeLabel": "Manual",
+      "filters": [
+        {
+          "filterMediums": [
+            "Pre-Filter"
+          ],
+          "modeLabel": "Manual",
+          "slot": 1,
+          "healthPercent": 66,
+          "healthLabel": "11-100%",
+          "isFilterUndetected": false,
+          "filterLevel": "normal",
+          "filterArticleNumber": "102.10.10.00",
+          "filterRuntime": null,
+          "lastResetDate": "2026-07-23T20:27:36.458Z"
+        },
+        {
+          "filterMediums": [
+            "Gas and odour filter"
+          ],
+          "modeLabel": "Manual",
+          "slot": 2,
+          "healthPercent": 73,
+          "healthLabel": "11-100%",
+          "isFilterUndetected": false,
+          "filterLevel": "normal",
+          "filterArticleNumber": "102.18.10.00",
+          "filterRuntime": null,
+          "lastResetDate": "2026-07-23T20:27:36.458Z"
+        },
+        {
+          "filterMediums": [
+            "Main particle filter"
+          ],
+          "modeLabel": "Manual",
+          "slot": 3,
+          "healthPercent": 90,
+          "healthLabel": "11-100%",
+          "isFilterUndetected": false,
+          "filterLevel": "normal",
+          "filterArticleNumber": "102.14.14.00",
+          "filterRuntime": null,
+          "lastResetDate": "2026-07-23T20:27:36.458Z"
+        }
+      ]
+    },
+    "filterMaintenance": [
+      {
+        "filterMediums": [
+          "Pre-Filter"
+        ],
+        "modeLabel": "Manual",
+        "slot": 1,
+        "healthPercent": 66,
+        "healthLabel": "11-100%",
+        "isFilterUndetected": false,
+        "filterLevel": "normal",
+        "filterArticleNumber": "102.10.10.00",
+        "filterRuntime": null,
+        "lastResetDate": "2026-07-23T20:27:36.458Z",
+        "usedSince": null
+      },
+      {
+        "filterMediums": [
+          "Gas and odour filter"
+        ],
+        "modeLabel": "Manual",
+        "slot": 2,
+        "healthPercent": 73,
+        "healthLabel": "11-100%",
+        "isFilterUndetected": false,
+        "filterLevel": "normal",
+        "filterArticleNumber": "102.18.10.00",
+        "filterRuntime": null,
+        "lastResetDate": "2026-07-23T20:27:36.458Z",
+        "usedSince": null
+      },
+      {
+        "filterMediums": [
+          "Main particle filter"
+        ],
+        "modeLabel": "Manual",
+        "slot": 3,
+        "healthPercent": 90,
+        "healthLabel": "11-100%",
+        "isFilterUndetected": false,
+        "filterLevel": "normal",
+        "filterArticleNumber": "102.14.14.00",
+        "filterRuntime": null,
+        "lastResetDate": "2026-07-23T20:27:36.458Z",
+        "usedSince": null
+      }
+    ],
+    "filtersDefinition": [
+      {
+        "pollutant": "pm25",
+        "name": "PM2.5"
+      },
+      {
+        "pollutant": "co2",
+        "name": "CO2"
+      },
+      {
+        "pollutant": "tvoc",
+        "name": "TVOC"
+      },
+      {
+        "pollutant": "hcho",
+        "name": "HCHO"
+      }
+    ],
+    "deviceGroups": [],
+    "filtersDetails": [
+      {
+        "slot": 1,
+        "healthPercent": 66,
+        "isFilterUndetected": false,
+        "filterMediums": [
+          "Pre-Filter"
+        ],
+        "filterLevel": "normal",
+        "lastResetDate": "2026-07-23T20:27:36.458Z",
+        "filterArticleNumber": "102.10.10.00",
+        "filterType": "PreMax Filter F8 (S)",
+        "imageUrl": "https://www.iqair.com/assets/app/filters/Filter-PreMax-F8-(S).jpg"
+      },
+      {
+        "slot": 2,
+        "healthPercent": 73,
+        "isFilterUndetected": false,
+        "filterMediums": [
+          "Gas and odour filter"
+        ],
+        "filterLevel": "normal",
+        "lastResetDate": "2026-07-23T20:27:36.458Z",
+        "filterArticleNumber": "102.18.10.00",
+        "filterType": "V5-Cell Filter MG",
+        "imageUrl": "https://www.iqair.com/assets/app/filters/Filter-V5-Cell%20Filter-MG.jpg"
+      },
+      {
+        "slot": 3,
+        "healthPercent": 90,
+        "isFilterUndetected": false,
+        "filterMediums": [
+          "Main particle filter"
+        ],
+        "filterLevel": "normal",
+        "lastResetDate": "2026-07-23T20:27:36.458Z",
+        "filterArticleNumber": "102.14.14.00",
+        "filterType": "HyperHEPA Filter H12/13 (L)",
+        "imageUrl": "https://www.iqair.com/assets/app/filters/Filter-HyperHEPA-H12-H13-(L).jpg"
+      }
+    ],
+    "isOwner": true,
+    "current": {
+      "ts": "2026-11-14T22:08:39.000Z",
+      "aqi": {
+        "value": 0,
+        "color": "green",
+        "label": "Good"
+      },
+      "outdoor": {
+        "ts": "2026-11-14T22:09:36.728Z"
+      },
+      "pm25": {
+        "value": 0,
+        "color": "green",
+        "label": "Good",
+        "aqi": 0
+      },
+      "pc": {
+        "value": 781
+      },
+      "fanSpeed": 6
+    },
+    "isTVScreenView": false,
+    "sensorsDefinition": [
+      {
+        "pollutant": "pm25",
+        "unit": "µg/m³",
+        "name": "PM2.5",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pc",
+        "unit": "ppb",
+        "name": "Part. Count",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pm10",
+        "unit": "µg/m³",
+        "name": "PM10",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "aqi",
+        "name": "AQI",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pm1",
+        "unit": "µg/m³",
+        "name": "PM1.0",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "co2",
+        "unit": "ppm",
+        "name": "CO2",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "o3",
+        "unit": "µg/m³",
+        "name": "O3",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "tvoc",
+        "unit": "ppb",
+        "name": "TVOC",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "hcho",
+        "unit": "ppb",
+        "name": "HCHO",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "temperature",
+        "unit": "°F",
+        "name": "Temperature",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "humidity",
+        "unit": "%",
+        "name": "Humidity",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pressure",
+        "unit": "Hg",
+        "name": "Pressure",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "vocIndex",
+        "unit": "",
+        "name": "TVOC Index",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "noxIndex",
+        "unit": "",
+        "name": "NOx Index",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "co",
+        "unit": "µg/m³",
+        "name": "CO",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "no2",
+        "unit": "µg/m³",
+        "name": "NO2",
+        "isPresent": false,
+        "hasSensor": true
+      }
+    ],
+    "healthRecommendations": {
+      "pollution": {
+        "exercise": {
+          "value": "hidden"
+        },
+        "windows": {
+          "value": "hidden"
+        },
+        "mask": {
+          "value": "hidden"
+        },
+        "airPurifier": {
+          "value": "hidden"
+        }
+      }
+    },
+    "devicesFollowing": []
+  },
+  {
+    "id": "wap_000000000000000000000002",
+    "serialNumber": "<redacted>",
+    "name": "Living Room",
+    "type": "device",
+    "registrationNumber": "<redacted>",
+    "model": "wap",
+    "modelLabel": "Atem E",
+    "modelSeries": "Atem Series",
+    "modelVariation": "ATEM-E",
+    "modelVisual": "WAP-WOOD",
+    "featureSet": {
+      "isHavingPmSensor": 1,
+      "isHavingVocTvocSensor": 0,
+      "isHavingHchoSenser": 0,
+      "isHavingCo2Sensor": 0,
+      "isAutoModeSupported": 1,
+      "isLocalAutoModeSupported": 1,
+      "isHavingTemperatureSensor": 0,
+      "isHavingHumiditySensor": 0,
+      "isFanSpeedControlInPercent": 0,
+      "isHavingLocalUserInterface": 1,
+      "isHavingEthernet": 0,
+      "isOutsideTargetRoom": 0
+    },
+    "isIndoor": true,
+    "isPublic": false,
+    "isConnected": true,
+    "lastSeenAt": "2026-11-14T21:44:43.000Z",
+    "brand": "iqair",
+    "connectivity": {
+      "type": "wifi",
+      "percentage": 100,
+      "wifiApSsid": "<redacted>",
+      "ipAddress": "<redacted>",
+      "macAddress": "<redacted>"
+    },
+    "shareCode": "<redacted>",
+    "timezone": "Etc/UTC",
+    "registrationDate": "2026-11-14T20:02:06.249Z",
+    "slots": [
+      {
+        "slot": 1,
+        "hasSensor": true,
+        "pollutant": "PM sensor module",
+        "module": "pm",
+        "alerts": []
+      }
+    ],
+    "performance": {
+      "cleanAirDeliveryRate": 0,
+      "cleanAirDeliveryRatePercent": 0,
+      "totCumAirVolume": 5739.4,
+      "totTimeFanRun": "19 days"
+    },
+    "remote": {
+      "powerMode": 2,
+      "speedPercent": 65,
+      "autoModeEnabled": false,
+      "lightIndicatorEnabled": true,
+      "isLocksEnabled": false,
+      "manSpeedTable": [
+        28,
+        42,
+        53,
+        65,
+        76,
+        100
+      ],
+      "uiStepwiseManMode": false,
+      "autoModeProfile": 2,
+      "speedLevel": 4,
+      "maxSpeedLevel": 6,
+      "calendarRunning": false,
+      "modeLabel": "Manual",
+      "filters": [
+        {
+          "filterMediums": [
+            "Main particle filter"
+          ],
+          "modeLabel": "Manual",
+          "slot": 1,
+          "healthPercent": 98,
+          "healthLabel": "11-100%",
+          "isFilterUndetected": false,
+          "filterLevel": "normal"
+        }
+      ]
+    },
+    "filterMaintenance": [
+      {
+        "filterMediums": [
+          "Main particle filter"
+        ],
+        "modeLabel": "Manual",
+        "slot": 1,
+        "healthPercent": 98,
+        "healthLabel": "11-100%",
+        "isFilterUndetected": false,
+        "filterLevel": "normal",
+        "usedSince": null
+      }
+    ],
+    "filtersDefinition": [
+      {
+        "pollutant": "pm25",
+        "name": "PM2.5"
+      }
+    ],
+    "deviceGroups": [],
+    "filtersDetails": [
+      {
+        "slot": 1,
+        "healthPercent": 98,
+        "isFilterUndetected": false,
+        "filterMediums": [
+          "Main particle filter"
+        ],
+        "filterLevel": "normal",
+        "lastResetDate": "2026-10-27T06:56:32.245Z"
+      }
+    ],
+    "isOwner": true,
+    "current": {
+      "ts": "2026-11-14T21:44:43.000Z",
+      "aqi": {
+        "value": 0,
+        "color": "green",
+        "label": "Good"
+      },
+      "outdoor": {
+        "ts": "2026-11-14T22:09:36.730Z"
+      },
+      "pm25": {
+        "value": 0,
+        "color": "green",
+        "label": "Good",
+        "aqi": 0
+      },
+      "pc": {
+        "value": 333
+      },
+      "fanSpeed": 4
+    },
+    "isTVScreenView": false,
+    "sensorsDefinition": [
+      {
+        "pollutant": "pm25",
+        "unit": "µg/m³",
+        "name": "PM2.5",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pc",
+        "unit": "ppb",
+        "name": "Part. Count",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pm10",
+        "unit": "µg/m³",
+        "name": "PM10",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "aqi",
+        "name": "AQI",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pm1",
+        "unit": "µg/m³",
+        "name": "PM1.0",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "co2",
+        "unit": "ppm",
+        "name": "CO2",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "o3",
+        "unit": "µg/m³",
+        "name": "O3",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "tvoc",
+        "unit": "ppb",
+        "name": "TVOC",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "hcho",
+        "unit": "ppb",
+        "name": "HCHO",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "temperature",
+        "unit": "°F",
+        "name": "Temperature",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "humidity",
+        "unit": "%",
+        "name": "Humidity",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pressure",
+        "unit": "Hg",
+        "name": "Pressure",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "vocIndex",
+        "unit": "",
+        "name": "TVOC Index",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "noxIndex",
+        "unit": "",
+        "name": "NOx Index",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "co",
+        "unit": "µg/m³",
+        "name": "CO",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "no2",
+        "unit": "µg/m³",
+        "name": "NO2",
+        "isPresent": false,
+        "hasSensor": true
+      }
+    ],
+    "healthRecommendations": {
+      "pollution": {
+        "exercise": {
+          "value": "hidden"
+        },
+        "windows": {
+          "value": "hidden"
+        },
+        "mask": {
+          "value": "hidden"
+        },
+        "airPurifier": {
+          "value": "hidden"
+        }
+      }
+    },
+    "devicesFollowing": []
+  },
+  {
+    "id": "wap_000000000000000000000003",
+    "serialNumber": "<redacted>",
+    "name": "Kitchen",
+    "type": "device",
+    "registrationNumber": "<redacted>",
+    "model": "wap",
+    "modelLabel": "Atem E",
+    "modelSeries": "Atem Series",
+    "modelVariation": "ATEM-E",
+    "modelVisual": "WAP-WOOD",
+    "featureSet": {
+      "isHavingPmSensor": 1,
+      "isHavingVocTvocSensor": 0,
+      "isHavingHchoSenser": 0,
+      "isHavingCo2Sensor": 0,
+      "isAutoModeSupported": 1,
+      "isLocalAutoModeSupported": 1,
+      "isHavingTemperatureSensor": 0,
+      "isHavingHumiditySensor": 0,
+      "isFanSpeedControlInPercent": 0,
+      "isHavingLocalUserInterface": 1,
+      "isHavingEthernet": 0,
+      "isOutsideTargetRoom": 0
+    },
+    "isIndoor": true,
+    "isPublic": false,
+    "isConnected": true,
+    "lastSeenAt": "2026-11-14T21:49:37.000Z",
+    "brand": "iqair",
+    "connectivity": {
+      "type": "wifi",
+      "percentage": 100,
+      "wifiApSsid": "<redacted>",
+      "ipAddress": "<redacted>",
+      "macAddress": "<redacted>"
+    },
+    "shareCode": "<redacted>",
+    "timezone": "Etc/UTC",
+    "registrationDate": "2026-11-14T20:01:36.477Z",
+    "slots": [
+      {
+        "slot": 1,
+        "hasSensor": true,
+        "pollutant": "PM sensor module",
+        "module": "pm",
+        "alerts": []
+      }
+    ],
+    "performance": {
+      "cleanAirDeliveryRate": 0,
+      "cleanAirDeliveryRatePercent": 0,
+      "totCumAirVolume": 5105.3,
+      "totTimeFanRun": "16 days"
+    },
+    "remote": {
+      "powerMode": 2,
+      "speedPercent": 65,
+      "autoModeEnabled": false,
+      "lightIndicatorEnabled": true,
+      "isLocksEnabled": false,
+      "manSpeedTable": [
+        28,
+        42,
+        53,
+        65,
+        76,
+        100
+      ],
+      "uiStepwiseManMode": false,
+      "autoModeProfile": 2,
+      "speedLevel": 4,
+      "maxSpeedLevel": 6,
+      "calendarRunning": false,
+      "modeLabel": "Manual",
+      "filters": [
+        {
+          "filterMediums": [
+            "Main particle filter"
+          ],
+          "modeLabel": "Manual",
+          "slot": 1,
+          "healthPercent": 98,
+          "healthLabel": "11-100%",
+          "isFilterUndetected": false,
+          "filterLevel": "normal"
+        }
+      ]
+    },
+    "filterMaintenance": [
+      {
+        "filterMediums": [
+          "Main particle filter"
+        ],
+        "modeLabel": "Manual",
+        "slot": 1,
+        "healthPercent": 98,
+        "healthLabel": "11-100%",
+        "isFilterUndetected": false,
+        "filterLevel": "normal",
+        "usedSince": null
+      }
+    ],
+    "filtersDefinition": [
+      {
+        "pollutant": "pm25",
+        "name": "PM2.5"
+      }
+    ],
+    "deviceGroups": [],
+    "filtersDetails": [
+      {
+        "slot": 1,
+        "healthPercent": 98,
+        "isFilterUndetected": false,
+        "filterMediums": [
+          "Main particle filter"
+        ],
+        "filterLevel": "normal",
+        "lastResetDate": "2026-10-29T19:22:24.033Z"
+      }
+    ],
+    "isOwner": true,
+    "current": {
+      "ts": "2026-11-14T21:49:37.000Z",
+      "aqi": {
+        "value": 0,
+        "color": "green",
+        "label": "Good"
+      },
+      "outdoor": {
+        "ts": "2026-11-14T22:09:36.731Z"
+      },
+      "pm25": {
+        "value": 0,
+        "color": "green",
+        "label": "Good",
+        "aqi": 0
+      },
+      "pc": {
+        "value": 646
+      },
+      "fanSpeed": 4
+    },
+    "isTVScreenView": false,
+    "sensorsDefinition": [
+      {
+        "pollutant": "pm25",
+        "unit": "µg/m³",
+        "name": "PM2.5",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pc",
+        "unit": "ppb",
+        "name": "Part. Count",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pm10",
+        "unit": "µg/m³",
+        "name": "PM10",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "aqi",
+        "name": "AQI",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pm1",
+        "unit": "µg/m³",
+        "name": "PM1.0",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "co2",
+        "unit": "ppm",
+        "name": "CO2",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "o3",
+        "unit": "µg/m³",
+        "name": "O3",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "tvoc",
+        "unit": "ppb",
+        "name": "TVOC",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "hcho",
+        "unit": "ppb",
+        "name": "HCHO",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "temperature",
+        "unit": "°F",
+        "name": "Temperature",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "humidity",
+        "unit": "%",
+        "name": "Humidity",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "pressure",
+        "unit": "Hg",
+        "name": "Pressure",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "vocIndex",
+        "unit": "",
+        "name": "TVOC Index",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "noxIndex",
+        "unit": "",
+        "name": "NOx Index",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "co",
+        "unit": "µg/m³",
+        "name": "CO",
+        "isPresent": false,
+        "hasSensor": true
+      },
+      {
+        "pollutant": "no2",
+        "unit": "µg/m³",
+        "name": "NO2",
+        "isPresent": false,
+        "hasSensor": true
+      }
+    ],
+    "healthRecommendations": {
+      "pollution": {
+        "exercise": {
+          "value": "hidden"
+        },
+        "windows": {
+          "value": "hidden"
+        },
+        "mask": {
+          "value": "hidden"
+        },
+        "airPurifier": {
+          "value": "hidden"
+        }
+      }
+    },
+    "devicesFollowing": []
+  }
+]
