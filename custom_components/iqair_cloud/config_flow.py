@@ -1,335 +1,143 @@
-"""Config flow for IQAir Cloud."""
-import logging
+"""Setup, reauth and reconfigure forms for an IQAir account."""
+from __future__ import annotations
+
+from collections.abc import Mapping
 from typing import Any
 
-import httpx
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
+from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 
-from .const import (
-    DOMAIN,
-    CONF_EMAIL,
-    CONF_LOGIN_TOKEN,
-    CONF_USER_ID,
-    CONF_AUTH_TOKEN,
-    CONF_DEVICE_ID,
-    CONF_SERIAL_NUMBER,
-    CONF_API_ENDPOINT,
-    CONF_DEVICE_PREFIX,
-    DEFAULT_API_ENDPOINT,
-    DEFAULT_DEVICE_PREFIX,
-    API_SERVICE_UI2,
-    API_SERVICE_KLR,
+from . import protocol
+from .api import IQAirClient, create_client_session
+from .const import CONF_LOGIN_TOKEN, CONF_SESSION, CONF_USER_ID, DOMAIN
+from .protocol import Login
+
+_PASSWORD = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD, autocomplete="current-password"))
+_SECRET = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+
+USER_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_EMAIL): TextSelector(
+            TextSelectorConfig(type=TextSelectorType.EMAIL, autocomplete="username")
+        ),
+        vol.Required(CONF_PASSWORD): _PASSWORD,
+        vol.Optional(CONF_SESSION): _SECRET,
+    }
 )
-from .api import IQAirApiClient, async_signin, async_get_cloud_api_auth_token
-from .exceptions import CannotConnect, InvalidAuth, NoDevicesFound
-
-_LOGGER = logging.getLogger(__name__)
+SECRETS_SCHEMA = vol.Schema({vol.Optional(CONF_PASSWORD): _PASSWORD, vol.Optional(CONF_SESSION): _SECRET})
 
 
-async def create_state_client(hass: HomeAssistant, login_token: str) -> httpx.AsyncClient:
-    """Create the httpx state client in a thread-safe way."""
+class IQAirConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Config flow for IQAir Cloud. One entry is one IQAir account."""
 
-    def _create_client() -> httpx.AsyncClient:
-        """Create the httpx client."""
-        return httpx.AsyncClient(headers={"x-login-token": login_token})
+    VERSION = 2
 
-    return await hass.async_add_executor_job(_create_client)
-
-
-async def validate_connection(
-    hass: HomeAssistant, login_token: str, user_id: str
-) -> list[dict[str, Any]]:
-    """Validate the user input allows us to connect."""
-    state_client = await create_state_client(hass, login_token)
-    api_client = IQAirApiClient(
-        command_client=None,  # Not needed for validation
-        state_client=state_client,
-        user_id=user_id,
-        serial_number=None,
-        endpoint=DEFAULT_API_ENDPOINT,
-        device_prefix=DEFAULT_DEVICE_PREFIX,
-    )
-
-    try:
-        devices = await api_client.async_get_devices()
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 401:
-            raise InvalidAuth from exc
-        raise CannotConnect from exc
-    except httpx.RequestError as exc:
-        raise CannotConnect from exc
-    finally:
-        await state_client.aclose()
-
-    if not devices:
-        raise NoDevicesFound
-
-    return devices
-
-
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for IQAir Cloud."""
-
-    VERSION = 1
-    _user_input: dict[str, Any] = {}
-    _devices: list[dict[str, Any]] = []
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
-    ) -> "IQAirOptionsFlowHandler":
-        """Get the options flow for this handler."""
-        return IQAirOptionsFlowHandler(config_entry)
-
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle the initial step to choose auth method."""
-        return self.async_show_menu(
-            step_id="user",
-            menu_options=["credentials", "tokens"],
-        )
-
-    async def async_step_credentials(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle the email and password step."""
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            session = async_get_clientsession(self.hass)
-            signin_data = await async_signin(
-                session, user_input[CONF_EMAIL], user_input[CONF_PASSWORD]
+            email = user_input[CONF_EMAIL].strip()
+            password = user_input[CONF_PASSWORD]
+            login, session, errors = await self._async_check(
+                email=email, password=password, session_text=user_input.get(CONF_SESSION)
             )
-
-            if signin_data:
-                self._user_input[CONF_LOGIN_TOKEN] = signin_data["loginToken"]
-                self._user_input[CONF_USER_ID] = signin_data["id"]
-
-                auth_token = await async_get_cloud_api_auth_token(session)
-                if not auth_token:
-                    errors["base"] = "cannot_connect"
-                    return self.async_show_form(
-                        step_id="credentials",
-                        data_schema=vol.Schema(
-                            {
-                                vol.Required(CONF_EMAIL): str,
-                                vol.Required(CONF_PASSWORD): str,
-                            }
-                        ),
-                        errors=errors,
-                    )
-                self._user_input[CONF_AUTH_TOKEN] = auth_token
-
-                try:
-                    self._devices = await validate_connection(
-                        self.hass,
-                        self._user_input[CONF_LOGIN_TOKEN],
-                        self._user_input[CONF_USER_ID],
-                    )
-                    return await self.async_step_select_device()
-                except CannotConnect:
-                    errors["base"] = "cannot_connect"
-                except InvalidAuth:
-                    errors["base"] = "invalid_auth"
-                except NoDevicesFound:
-                    errors["base"] = "no_devices"
-            else:
-                errors["base"] = "invalid_auth"
-
-        return self.async_show_form(
-            step_id="credentials",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_EMAIL): str,
-                    vol.Required(CONF_PASSWORD): str,
+            if not errors and login is not None:
+                await self.async_set_unique_id(login.user_id)
+                self._abort_if_unique_id_configured()
+                data = {
+                    CONF_EMAIL: email,
+                    CONF_PASSWORD: password,
+                    CONF_USER_ID: login.user_id,
+                    CONF_LOGIN_TOKEN: login.login_token,
                 }
-            ),
+                if session:
+                    data[CONF_SESSION] = session
+                return self.async_create_entry(title=email, data=data)
+        # Only the email is offered back after an error; secrets must be typed again.
+        suggested = {CONF_EMAIL: user_input[CONF_EMAIL]} if user_input else None
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(USER_SCHEMA, suggested),
             errors=errors,
         )
 
-    async def async_step_tokens(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle the manual token entry step."""
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._async_update_secrets("reauth_confirm", self._get_reauth_entry(), user_input)
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        return await self._async_update_secrets("reconfigure", self._get_reconfigure_entry(), user_input)
+
+    async def _async_update_secrets(
+        self, step_id: str, entry: ConfigEntry, user_input: dict[str, Any] | None
+    ) -> ConfigFlowResult:
+        """Replace the password, the dashboard session, or both, on an existing entry."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            self._user_input = user_input
-            try:
-                self._devices = await validate_connection(
-                    self.hass, user_input[CONF_LOGIN_TOKEN], user_input[CONF_USER_ID]
+            password = user_input.get(CONF_PASSWORD) or None
+            session_text = (user_input.get(CONF_SESSION) or "").strip() or None
+            login: Login | None = None
+            session: str | None = None
+            if password is None and session_text is None:
+                errors["base"] = "nothing_entered"
+            else:
+                login, session, errors = await self._async_check(
+                    email=entry.data[CONF_EMAIL], password=password, session_text=session_text
                 )
-                return await self.async_step_select_device()
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-            except InvalidAuth:
-                errors["base"] = "invalid_auth"
-            except NoDevicesFound:
-                errors["base"] = "no_devices"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown"
-
+                if not errors and login is not None and entry.unique_id not in (None, login.user_id):
+                    errors["base"] = "wrong_account"
+            if not errors:
+                updates: dict[str, Any] = {}
+                if login is not None:
+                    updates[CONF_PASSWORD] = password
+                    updates[CONF_USER_ID] = login.user_id
+                    updates[CONF_LOGIN_TOKEN] = login.login_token
+                if session is not None:
+                    updates[CONF_SESSION] = session
+                return self.async_update_reload_and_abort(entry, data_updates=updates)
         return self.async_show_form(
-            step_id="tokens",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_LOGIN_TOKEN): str,
-                    vol.Required(CONF_USER_ID): str,
-                    vol.Required(CONF_AUTH_TOKEN): str,
-                }
-            ),
+            step_id=step_id,
+            data_schema=SECRETS_SCHEMA,
             errors=errors,
+            description_placeholders={"email": entry.data[CONF_EMAIL]},
         )
 
-    async def async_step_select_device(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle the device selection step."""
-        if user_input is not None:
-            device_id = user_input[CONF_DEVICE_ID]
-            device = next(dev for dev in self._devices if dev["id"] == device_id)
-            device_name = device["name"]
-            serial_number = device["serialNumber"]
+    async def _async_check(
+        self, *, email: str, password: str | None, session_text: str | None
+    ) -> tuple[Login | None, str | None, dict[str, str]]:
+        """Try what the user entered against IQAir. Returns (login, session, errors)."""
+        session: str | None = None
+        if session_text and session_text.strip():
+            try:
+                session = protocol.normalize_session(session_text)
+            except ValueError:
+                # Wrong clipboard content: say so before sending anything anywhere.
+                return None, None, {CONF_SESSION: "invalid_session"}
 
-            if self.context.get("source") == config_entries.SOURCE_REAUTH:
-                existing_entry = self.hass.config_entries.async_get_entry(
-                    self.context["entry_id"]
-                )
-                self._abort_if_unique_id_configured(
-                    updates={
-                        CONF_LOGIN_TOKEN: self._user_input[CONF_LOGIN_TOKEN],
-                        CONF_USER_ID: self._user_input[CONF_USER_ID],
-                        CONF_AUTH_TOKEN: self._user_input[CONF_AUTH_TOKEN],
-                    }
-                )
-                self.hass.config_entries.async_update_entry(
-                    existing_entry,
-                    data={
-                        **existing_entry.data,
-                        CONF_LOGIN_TOKEN: self._user_input[CONF_LOGIN_TOKEN],
-                        CONF_USER_ID: self._user_input[CONF_USER_ID],
-                        CONF_AUTH_TOKEN: self._user_input[CONF_AUTH_TOKEN],
-                    },
-                )
-                await self.hass.config_entries.async_reload(existing_entry.entry_id)
-                return self.async_abort(reason="reauth_successful")
-
-            await self.async_set_unique_id(device_id)
-            self._abort_if_unique_id_configured()
-
-            data = {
-                **self._user_input,
-                CONF_DEVICE_ID: device_id,
-                CONF_SERIAL_NUMBER: serial_number,
-            }
-
-            return self.async_create_entry(title=device_name, data=data)
-
-        device_options = {dev["id"]: dev["name"] for dev in self._devices}
-        return self.async_show_form(
-            step_id="select_device",
-            data_schema=vol.Schema({vol.Required(CONF_DEVICE_ID): vol.In(device_options)}),
-        )
-
-    async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
-        """Handle re-authentication."""
-        return await self.async_step_user(entry_data)
-
-
-class IQAirOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle an options flow for IQAir Cloud."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Manage the options."""
-        if user_input is not None:
-            # Handle Service Selection
-            if user_input["service_select"] == "custom":
-                api_endpoint = user_input.get("custom_service")
-                if not api_endpoint:
-                     # Fallback to default if custom selected but left empty
-                     api_endpoint = DEFAULT_API_ENDPOINT
-            else:
-                api_endpoint = user_input["service_select"]
-
-            # Handle Prefix Selection
-            if user_input["prefix_select"] == "custom":
-                prefix = user_input.get("custom_prefix")
-                if not prefix:
-                    prefix = DEFAULT_DEVICE_PREFIX
-            else:
-                prefix = user_input["prefix_select"]
-
-            data = {
-                CONF_API_ENDPOINT: api_endpoint,
-                CONF_DEVICE_PREFIX: prefix,
-            }
-
-            if user_input.get("update_credentials"):
-                self.config_entry.async_start_reauth(self.hass)
-
-            return self.async_create_entry(title="", data=data)
-
-        # Retrieve current values from options, falling back to defaults
-        current_endpoint = self.config_entry.options.get(
-            CONF_API_ENDPOINT, DEFAULT_API_ENDPOINT
-        )
-        current_prefix = self.config_entry.options.get(
-            CONF_DEVICE_PREFIX, DEFAULT_DEVICE_PREFIX
-        )
-
-        # Determine dropdown states
-        if current_endpoint == API_SERVICE_UI2:
-            service_select = API_SERVICE_UI2
-        elif current_endpoint == API_SERVICE_KLR:
-            service_select = API_SERVICE_KLR
-        else:
-            service_select = "custom"
-
-        if current_prefix == "UI2":
-            prefix_select = "UI2"
-        elif current_prefix == "KLR":
-            prefix_select = "KLR"
-        else:
-            prefix_select = "custom"
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Required("service_select", default=service_select): vol.In(
-                        {
-                            API_SERVICE_UI2: "Default (Multigas/UI2)",
-                            API_SERVICE_KLR: "Atem X (KLR)",
-                            "custom": "Custom",
-                        }
-                    ),
-                    vol.Optional(
-                        "custom_service", description={"suggested_value": current_endpoint}
-                    ): str,
-                    vol.Required("prefix_select", default=prefix_select): vol.In(
-                        {
-                            "UI2": "Default (Multigas/UI2)",
-                            "KLR": "Atem X (KLR)",
-                            "custom": "Custom",
-                        }
-                    ),
-                    vol.Optional(
-                        "custom_prefix", description={"suggested_value": current_prefix}
-                    ): str,
-                    vol.Optional("update_credentials", default=False): bool,
-                }
-            ),
-        )
+        login: Login | None = None
+        errors: dict[str, str] = {}
+        http = create_client_session(self.hass, auto_cleanup=False)
+        try:
+            client = IQAirClient(http, email=email, password=password or "", dashboard_session=session)
+            if password is not None:
+                try:
+                    login = await client.async_sign_in()
+                except protocol.InvalidCredentials:
+                    errors["base"] = "invalid_auth"
+                except protocol.IQAirError:
+                    errors["base"] = "cannot_connect"
+            if not errors and session is not None:
+                try:
+                    accepted = await client.async_check_session()
+                except protocol.IQAirError:
+                    errors["base"] = "cannot_connect"
+                else:
+                    if not accepted:
+                        errors[CONF_SESSION] = "invalid_session"
+        finally:
+            http.detach()
+        return login, session, errors

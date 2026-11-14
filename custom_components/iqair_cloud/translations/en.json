@@ -2,35 +2,93 @@
   "config": {
     "step": {
       "user": {
-        "menu_options": {
-          "credentials": "Email and Password",
-          "tokens": "Manual Tokens"
+        "title": "IQAir account",
+        "description": "Email and password are used to read your purifiers. Controlling them also needs the session cookie of a signed-in IQAir dashboard; you can add it now or later with Reconfigure.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "session": "Dashboard session cookie (optional)"
         },
-        "menu_option_descriptions": {
-          "credentials": "The recommended method. The integration will sign in with your email and password to get the necessary tokens.",
-          "tokens": "For advanced users. Manually provide the login token, user ID, and auth token."
+        "data_description": {
+          "password": "Your IQAir password. If you normally sign in with Google, set a password on your IQAir account first.",
+          "session": "Sign in at dashboard.iqair.com, open the browser's developer tools, and copy the Cookie request header of any request to dashboard.iqair.com. You can paste the whole header; only the `session` cookie is kept."
         }
       },
-      "tokens": {
+      "reauth_confirm": {
+        "title": "IQAir needs new credentials",
+        "description": "IQAir stopped accepting the stored password or dashboard session for {email}. Fill in the one that changed and leave the other empty.",
         "data": {
-          "auth_token": "Cloud API Auth Token"
+          "password": "Password",
+          "session": "Dashboard session cookie"
+        },
+        "data_description": {
+          "password": "Only needed if you changed your IQAir password.",
+          "session": "Sign in at dashboard.iqair.com, open the browser's developer tools, and copy the Cookie request header of any request to dashboard.iqair.com."
         }
+      },
+      "reconfigure": {
+        "title": "IQAir credentials",
+        "description": "Update the password or the dashboard session for {email}. Leave a field empty to keep what is stored.",
+        "data": {
+          "password": "Password",
+          "session": "Dashboard session cookie"
+        },
+        "data_description": {
+          "session": "Sign in at dashboard.iqair.com, open the browser's developer tools, and copy the Cookie request header of any request to dashboard.iqair.com."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "IQAir did not accept this email and password.",
+      "wrong_account": "That password belongs to a different IQAir account than the one configured.",
+      "invalid_session": "IQAir did not accept this session cookie. Copy it again from a browser that is signed in to dashboard.iqair.com.",
+      "nothing_entered": "Enter a password or a session cookie.",
+      "cannot_connect": "Could not reach IQAir. Try again in a few minutes.",
+      "unknown": "Unexpected error. Check the Home Assistant log."
+    },
+    "abort": {
+      "already_configured": "This IQAir account is already configured.",
+      "reauth_successful": "Credentials updated.",
+      "reconfigure_successful": "Credentials updated."
+    }
+  },
+  "entity": {
+    "fan": {
+      "purifier": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "quiet": "Quiet",
+              "balanced": "Balanced",
+              "max": "Max"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "fan_speed": {
+        "name": "Fan speed"
+      }
+    },
+    "sensor": {
+      "particle_count": {
+        "name": "Particle count"
       }
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Device Configuration",
-        "description": "Configure the API connection settings for your IQAir device.",
-        "data": {
-          "service_select": "API Service",
-          "custom_service": "Custom Service Endpoint (e.g. grpc.ui2.v1.UI2Service)",
-          "prefix_select": "Device Serial Prefix",
-          "custom_prefix": "Custom Serial Prefix (e.g. UI2)",
-          "update_credentials": "Re-authenticate (Clean Login Tokens)"
-        }
-      }
+  "exceptions": {
+    "control_not_configured": {
+      "message": "Controlling IQAir purifiers needs a dashboard session cookie. Add one with Reconfigure on the IQAir Cloud integration."
+    },
+    "session_expired": {
+      "message": "IQAir no longer accepts the dashboard session. Enter a new session cookie to control the purifier."
+    },
+    "command_rejected": {
+      "message": "IQAir refused the command: {reason}"
+    },
+    "command_failed": {
+      "message": "The command did not reach IQAir: {reason}"
     }
   }
 }

@@ -1,339 +1,114 @@
-"""API client for the IQAir Cloud service."""
-import base64
-import logging
-import re
-import struct
+"""Network client for IQAir. It sends what protocol.py builds and nothing else."""
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Callable
 from typing import Any
 
-import httpx
+import aiohttp
 
-from .const import (
-    GRPC_API_BASE_URL,
-    WEB_API_URL,
-    WEB_API_PARAMS,
-    WEB_API_SIGNIN_URL,
-    DASHBOARD_URL,
-    ENDPOINT_FAN_SPEED,
-    ENDPOINT_POWER,
-    ENDPOINT_AUTO_MODE,
-    ENDPOINT_AUTO_MODE_PROFILE,
-    ENDPOINT_LIGHT_INDICATOR,
-    ENDPOINT_LIGHT_LEVEL,
-    ENDPOINT_LOCKS,
-    FIELD_POWER,
-    FIELD_FAN_SPEED,
-    FIELD_FAN_SPEED_PERCENT,
-    FIELD_LIGHT_INDICATOR,
-    FIELD_LIGHT_LEVEL,
-    FIELD_AUTO_MODE,
-    FIELD_AUTO_MODE_PROFILE,
-    FIELD_LOCKS,
-)
-from .exceptions import InvalidAuth
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-_LOGGER = logging.getLogger(__name__)
+from . import protocol
+from .protocol import Device, Login
+
+REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=20)
+MAX_DEVICE_PAGES = 10
 
 
-def _decode_grpc_response(base64_string: str) -> str:
-    """Decodes a gRPC-Web Base64 response into a human-readable string."""
-    if not base64_string:
-        return "  [Empty Response Body]"
+def create_client_session(hass: HomeAssistant, *, auto_cleanup: bool = True) -> aiohttp.ClientSession:
+    """Create a session that stores no cookies.
 
-    # Split concatenated base64 strings into frames
-    delimited_input = re.sub(r"(=+)([A-Za-z0-9+/])", r"\1\n\2", base64_string)
-    base64_frames = [frame for frame in delimited_input.split("\n") if frame]
-    if not base64_frames and base64_string:
-        base64_frames.append(base64_string)
-
-    decoded_output = []
-    for frame_b64 in base64_frames:
-        try:
-            frame_bytes = base64.b64decode(frame_b64)
-            if len(frame_bytes) < 5:
-                decoded_output.append(
-                    f"  [Invalid Frame: Too short ({len(frame_bytes)} bytes)]"
-                )
-                continue
-
-            frame_type = frame_bytes[0]
-            # Unpack the 4-byte length header (big-endian)
-            length = struct.unpack(">I", frame_bytes[1:5])[0]
-            payload = frame_bytes[5:]
-
-            if frame_type == 0x00:
-                frame_type_str = "DATA (0x00)"
-                # Data payload is binary, show as hex
-                payload_str = " ".join(f"{b:02x}" for b in payload)
-            elif frame_type == 0x80:
-                frame_type_str = "TRAILERS (0x80)"
-                # Trailers payload is text
-                payload_str = f"'{payload.decode('utf-8').strip()}'"
-            else:
-                frame_type_str = f"Unknown (0x{frame_type:02x})"
-                payload_str = " ".join(f"{b:02x}" for b in payload)
-
-            decoded_output.append(
-                f"  [Frame: {frame_type_str}, Length: {length}, Payload: {payload_str}]"
-            )
-
-        except Exception as e:
-            decoded_output.append(f"  [Decoding Error: {e}]")
-
-    return "\n".join(decoded_output)
+    The dashboard session travels as a literal Cookie header. With a cookie jar, aiohttp
+    would merge that header with stored cookies and re-quote it, which corrupts a value
+    containing characters such as "=" or "/".
+    """
+    return async_create_clientsession(hass, auto_cleanup=auto_cleanup, cookie_jar=aiohttp.DummyCookieJar())
 
 
-class IQAirApiClient:
-    """A client to communicate with the IQAir Cloud APIs."""
+class IQAirClient:
+    """Talks to IQAir for one account."""
 
     def __init__(
         self,
-        command_client: httpx.AsyncClient,
-        state_client: httpx.AsyncClient,
-        user_id: str,
-        serial_number: str | None,
-        endpoint: str,
-        device_prefix: str,
-    ):
-        """Initialize the API client."""
-        self._user_id = user_id
-        self._command_client = command_client
-        self._state_client = state_client
-        self._serial_number = serial_number
-        self._endpoint = endpoint
-        self._device_prefix = device_prefix
+        session: aiohttp.ClientSession,
+        *,
+        email: str,
+        password: str,
+        login: Login | None = None,
+        dashboard_session: str | None = None,
+        on_login: Callable[[Login], None] | None = None,
+    ) -> None:
+        self._session = session
+        self._email = email
+        self._password = password
+        self._login = login
+        self._dashboard_session = dashboard_session
+        self._on_login = on_login
 
-    def _build_payload(self, field: int, value: int | None = None) -> str:
-        """Build the gRPC payload."""
-        if not self._serial_number:
-            raise ValueError("Serial number is not set")
+    @property
+    def has_dashboard_session(self) -> bool:
+        return bool(self._dashboard_session)
 
-        # The payload uses the serial number without the prefix (e.g. "UI2_" or "KLR_")
-        prefix = f"{self._device_prefix}_"
-        sn_part = self._serial_number.replace(prefix, "").lower().encode("utf-8")
-        payload_bytes = bytearray([0x0A, len(sn_part)]) + sn_part
+    async def async_sign_in(self) -> Login:
+        """Sign in with email and password. Raises InvalidCredentials if refused."""
+        status, body = await self._send(protocol.sign_in_request(self._email, self._password))
+        self._login = protocol.parse_sign_in(status, body)
+        if self._on_login is not None:
+            self._on_login(self._login)
+        return self._login
 
-        if value is not None:
-            payload_bytes += bytearray([field, value])
-
-        # Frame the payload
-        length = len(payload_bytes)
-        frame = struct.pack(">I", length)  # 4-byte length
-        framed_payload = bytearray([0x00]) + frame + payload_bytes  # 1-byte type
-
-        return base64.b64encode(framed_payload).decode("utf-8")
-
-    async def _send_command(
-        self, endpoint: str, payload: str, context: str | None = None
-    ) -> dict[str, Any] | None:
-        """Send a command request to the gRPC API and return the new state."""
-        url = f"{GRPC_API_BASE_URL}{self._endpoint}{endpoint}"
-        context_str = f" ({context})" if context else ""
+    async def async_get_devices(self) -> list[Device]:
+        """Read every device. Signs in again at most once if the token is rejected."""
+        if self._login is None:
+            await self.async_sign_in()
         try:
-            response = await self._command_client.post(url, content=payload)
-            response.raise_for_status()
-            decoded_response = _decode_grpc_response(response.text)
-            _LOGGER.debug(
-                "Command to %s successful%s. Status: %s, Version: %s\nRequest Body: %s\nResponse Body:\n%s",
-                url,
-                context_str,
-                response.status_code,
-                response.http_version,
-                payload,
-                decoded_response,
-            )
-
-            # Parse the response to extract the new state
-            delimited_input = re.sub(r"(=+)([A-Za-z0-9+/])", r"\1\n\2", response.text)
-            base64_frames = [frame for frame in delimited_input.split("\n") if frame]
-            if not base64_frames and response.text:
-                base64_frames.append(response.text)
-
-            new_state = {}
-            if not base64_frames:
-                return {}
-
-            first_frame_b64 = base64_frames[0]
-            frame_bytes = base64.b64decode(first_frame_b64)
-
-            # Check for empty payload which indicates "off" for some switches
-            if len(frame_bytes) == 5:
-                if endpoint == ENDPOINT_LIGHT_INDICATOR:
-                    return {"lightIndicatorEnabled": False}
-                if endpoint == ENDPOINT_AUTO_MODE:
-                    return {"autoModeEnabled": False}
-                if endpoint == ENDPOINT_LOCKS:
-                    return {"isLocksEnabled": False}
-
-            if len(frame_bytes) > 6 and frame_bytes[0] == 0x00:  # DATA Frame
-                value = frame_bytes[6]
-                if endpoint == ENDPOINT_POWER:
-                    new_state = {"powerMode": value}
-                elif endpoint == ENDPOINT_FAN_SPEED:
-                    new_state = {"speedLevel": value}
-                elif endpoint == ENDPOINT_LIGHT_LEVEL:
-                    new_state = {"lightLevel": value, "lightIndicatorEnabled": True}
-                elif endpoint == ENDPOINT_LIGHT_INDICATOR:
-                    new_state = {"lightIndicatorEnabled": value == 1}
-                elif endpoint == ENDPOINT_AUTO_MODE:
-                    new_state = {"autoModeEnabled": value == 1}
-                elif endpoint == ENDPOINT_AUTO_MODE_PROFILE:
-                    new_state = {"autoModeProfile": value}
-                elif endpoint == ENDPOINT_LOCKS:
-                    new_state = {"isLocksEnabled": value == 1}
-
-            return new_state
-
-        except (httpx.RequestError, base64.binascii.Error, IndexError, ValueError) as e:
-            _LOGGER.error(
-                "Error sending or parsing command to %s%s: %s", url, context_str, e
-            )
-            return None
-
-    async def set_power(
-        self, is_on: bool, context: str | None = None
-    ) -> dict[str, Any] | None:
-        """Set the power state of the device."""
-        value = 2 if is_on else 3
-        payload = self._build_payload(FIELD_POWER, value)
-        return await self._send_command(ENDPOINT_POWER, payload, context=context)
-
-    async def set_fan_speed(
-        self, speed_level: int, context: str | None = None
-    ) -> dict[str, Any] | None:
-        """Set the fan speed of the device."""
-        if not 1 <= speed_level <= 6:
-            _LOGGER.error("Invalid fan speed level: %s", speed_level)
-            return None
-        payload = self._build_payload(FIELD_FAN_SPEED, speed_level)
-        return await self._send_command(ENDPOINT_FAN_SPEED, payload, context=context)
-
-    async def set_fan_speed_percent(
-        self, percentage: int, context: str | None = None
-    ) -> dict[str, Any] | None:
-        """Set the fan speed of the device by percentage."""
-        if not 0 <= percentage <= 100:
-            _LOGGER.error("Invalid fan speed percentage: %s", percentage)
-            return None
-        payload = self._build_payload(FIELD_FAN_SPEED_PERCENT, percentage)
-        return await self._send_command(ENDPOINT_FAN_SPEED, payload, context=context)
-
-    async def set_light_indicator(self, is_on: bool) -> dict[str, Any] | None:
-        """Set the light indicator state."""
-        value = 1 if is_on else None
-        payload = self._build_payload(FIELD_LIGHT_INDICATOR, value)
-        return await self._send_command(ENDPOINT_LIGHT_INDICATOR, payload)
-
-    async def set_light_level(self, level: int) -> dict[str, Any] | None:
-        """Set the light brightness level."""
-        if level not in [1, 2, 3]:
-            _LOGGER.error("Invalid light level: %s", level)
-            return None
-        payload = self._build_payload(FIELD_LIGHT_LEVEL, level)
-        return await self._send_command(ENDPOINT_LIGHT_LEVEL, payload)
-
-    async def set_auto_mode(self, is_on: bool) -> dict[str, Any] | None:
-        """Set the auto mode state."""
-        value = 1 if is_on else None
-        payload = self._build_payload(FIELD_AUTO_MODE, value)
-        return await self._send_command(ENDPOINT_AUTO_MODE, payload)
-
-    async def set_auto_mode_profile(self, profile_id: int) -> dict[str, Any] | None:
-        """Set the auto mode profile."""
-        if profile_id not in [1, 2, 3]:
-            _LOGGER.error("Invalid auto mode profile ID: %s", profile_id)
-            return None
-        payload = self._build_payload(FIELD_AUTO_MODE_PROFILE, profile_id)
-        return await self._send_command(ENDPOINT_AUTO_MODE_PROFILE, payload)
-
-    async def set_lock(self, is_on: bool) -> dict[str, Any] | None:
-        """Set the control panel lock state."""
-        value = 1 if is_on else None
-        payload = self._build_payload(FIELD_LOCKS, value)
-        return await self._send_command(ENDPOINT_LOCKS, payload)
-
-    async def async_get_devices(self) -> list[dict[str, Any]]:
-        """Fetch all devices from the Web API."""
-        url = WEB_API_URL.format(user_id=self._user_id)
+            return await self._async_list_devices()
+        except protocol.LoginExpired:
+            await self.async_sign_in()
         try:
-            response = await self._state_client.get(url, params=WEB_API_PARAMS)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                _LOGGER.error(
-                    "Authentication error fetching devices. Your login token may have expired. Please re-authenticate the integration."
-                )
-                raise InvalidAuth from e
-            _LOGGER.error("Error fetching devices from %s: %s", url, e)
-            raise
-        except (httpx.RequestError, ValueError) as e:
-            _LOGGER.error("Error fetching devices from %s: %s", url, e)
-            return []
+            return await self._async_list_devices()
+        except protocol.LoginExpired as err:
+            raise protocol.ProtocolError("IQAir rejected a login token it had just issued") from err
 
-    async def async_get_device_state(self, device_id: str) -> dict[str, Any] | None:
-        """Fetch state for a specific device."""
+    async def _async_list_devices(self) -> list[Device]:
+        assert self._login is not None
+        devices: dict[str, Device] = {}
+        for page in range(1, MAX_DEVICE_PAGES + 1):
+            status, body = await self._send(protocol.devices_request(self._login, page))
+            batch = protocol.parse_devices(status, body)
+            new = [device for device in batch if device.id not in devices]
+            devices.update((device.id, device) for device in new)
+            if len(batch) < protocol.DEVICES_PER_PAGE or not new:
+                break
+        return list(devices.values())
+
+    async def async_send_command(self, device_id: str, command: dict[str, Any]) -> Any:
+        """Send one command. Raises SessionExpired or CommandRejected when it is not taken."""
+        if not self._dashboard_session:
+            raise protocol.SessionExpired("no dashboard session is configured")
+        status, body = await self._send(protocol.command_request(device_id, self._dashboard_session, command))
+        return protocol.parse_command_response(status, body)
+
+    async def async_check_session(self) -> bool:
+        """Return whether the dashboard still accepts the session. Read-only."""
+        if not self._dashboard_session:
+            return False
+        status, body = await self._send(protocol.session_check_request(self._dashboard_session))
+        return protocol.parse_session_check(status, body)
+
+    async def _send(self, request: protocol.Request) -> tuple[int, str]:
         try:
-            devices = await self.async_get_devices()
-            return next(
-                (device for device in devices if device.get("id") == device_id), None
-            )
-        except httpx.HTTPStatusError:
-            return None
-
-
-async def async_get_cloud_api_auth_token(
-    session: httpx.AsyncClient,
-) -> str | None:
-    """Fetch the hardcoded cloudApiAuthToken from the dashboard's JS."""
-    try:
-        # 1. Fetch the dashboard HTML
-        response = await session.get(DASHBOARD_URL)
-        response.raise_for_status()
-        html_content = await response.text()
-
-        # 2. Find the main JS file URL
-        match = re.search(r'src="(main\.[a-f0-9]+\.js)"', html_content)
-        if not match:
-            _LOGGER.error("Could not find main JS file in dashboard HTML.")
-            return None
-        js_filename = match.group(1)
-        js_url = f"{DASHBOARD_URL}{js_filename}"
-
-        # 3. Fetch the JS file content
-        response = await session.get(js_url)
-        response.raise_for_status()
-        js_content = await response.text()
-
-        # 4. Extract the auth token
-        match = re.search(r'cloudApiAuthToken:"(Bearer [^"]+)"', js_content)
-        if not match:
-            _LOGGER.error("Could not find cloudApiAuthToken in JS file.")
-            return None
-
-        # Return only the token part, without "Bearer "
-        return match.group(1).replace("Bearer ", "")
-
-    except httpx.RequestError as e:
-        _LOGGER.error("Error fetching IQAir dashboard/JS for auth token: %s", e)
-        return None
-
-
-async def async_signin(
-    session: httpx.AsyncClient, email: str, password: str
-) -> dict[str, Any] | None:
-    """Sign in to get user ID and login token."""
-    try:
-        response = await session.post(
-            WEB_API_SIGNIN_URL, json={"email": email, "password": password}
-        )
-        response.raise_for_status()
-        return await response.json()
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 400:  # Typically invalid credentials
-            _LOGGER.error("Sign-in failed: Invalid email or password.")
-        else:
-            _LOGGER.error("Sign-in failed with status %s", e.response.status_code)
-        return None
-    except (httpx.RequestError, ValueError) as e:
-        _LOGGER.error("Error during sign-in: %s", e)
-        return None
+            async with self._session.request(
+                request.method,
+                request.url,
+                headers=request.headers,
+                params=request.params,
+                json=request.json,
+                allow_redirects=False,  # a redirect means "log in again", never "go there"
+                timeout=REQUEST_TIMEOUT,
+            ) as response:
+                return response.status, await response.text(errors="replace")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            raise protocol.TemporaryError(f"could not reach IQAir ({type(err).__name__})") from err

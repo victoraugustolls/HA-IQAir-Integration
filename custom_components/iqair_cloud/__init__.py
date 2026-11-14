@@ -1,104 +1,82 @@
-"""The IQAir Cloud integration."""
-from __future__ import annotations
-from typing import Any
+"""IQAir Cloud integration for Home Assistant.
 
-import httpx
+Forked from ThioJoe/HA-IQAir-Integration (AGPL-3.0) and rewritten for the cloud API
+IQAir has served since late October 2026. See protocol.py for how that API works.
+"""
+from __future__ import annotations
+
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.event import async_track_time_interval
 
-from .api import IQAirApiClient
-from .const import (
-    DOMAIN,
-    CONF_LOGIN_TOKEN,
-    CONF_USER_ID,
-    CONF_AUTH_TOKEN,
-    CONF_SERIAL_NUMBER,
-    CONF_API_ENDPOINT,
-    CONF_DEVICE_PREFIX,
-    DEFAULT_API_ENDPOINT,
-    DEFAULT_DEVICE_PREFIX,
-    GRPC_API_HEADERS,
-)
-from .coordinator import IQAirDataUpdateCoordinator
+from .api import IQAirClient, create_client_session
+from .const import CONF_LOGIN_TOKEN, CONF_SESSION, CONF_USER_ID, SESSION_CHECK_INTERVAL
+from .coordinator import IQAirCoordinator
+from .protocol import Login
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [
-    Platform.FAN,
-    Platform.SWITCH,
-    Platform.SELECT,
-]
+PLATFORMS: list[Platform] = [Platform.FAN, Platform.NUMBER, Platform.SENSOR]
+
+type IQAirConfigEntry = ConfigEntry[IQAirCoordinator]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up IQAir Cloud from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-    login_token = entry.data[CONF_LOGIN_TOKEN]
-    user_id = entry.data[CONF_USER_ID]
-    auth_token = entry.data[CONF_AUTH_TOKEN]
-    serial_number = entry.data[CONF_SERIAL_NUMBER]
+async def async_setup_entry(hass: HomeAssistant, entry: IQAirConfigEntry) -> bool:
+    """Set up one IQAir account."""
+    data = entry.data
+    login = None
+    if data.get(CONF_USER_ID) and data.get(CONF_LOGIN_TOKEN):
+        login = Login(user_id=data[CONF_USER_ID], login_token=data[CONF_LOGIN_TOKEN])
 
-    # Retrieve options or defaults
-    api_endpoint = entry.options.get(CONF_API_ENDPOINT, DEFAULT_API_ENDPOINT)
-    device_prefix = entry.options.get(CONF_DEVICE_PREFIX, DEFAULT_DEVICE_PREFIX)
+    @callback
+    def store_login(new_login: Login) -> None:
+        """Keep a refreshed login token so a restart does not need a new sign-in.
 
-    def _create_clients() -> tuple[httpx.AsyncClient, httpx.AsyncClient]:
-        """Create the httpx clients in a thread-safe way."""
-        command_client = httpx.AsyncClient(
-            http2=True,
-            headers={**GRPC_API_HEADERS, "Authorization": f"Bearer {auth_token}"},
+        There is deliberately no update listener on this entry: storing the token must
+        not reload the integration.
+        """
+        hass.config_entries.async_update_entry(
+            entry,
+            data={**entry.data, CONF_USER_ID: new_login.user_id, CONF_LOGIN_TOKEN: new_login.login_token},
         )
-        state_client = httpx.AsyncClient(headers={"x-login-token": login_token})
-        return command_client, state_client
 
-    command_client, state_client = await hass.async_add_executor_job(_create_clients)
-
-    api_client = IQAirApiClient(
-        command_client=command_client,
-        state_client=state_client,
-        user_id=user_id,
-        serial_number=serial_number,
-        endpoint=api_endpoint,
-        device_prefix=device_prefix,
+    client = IQAirClient(
+        create_client_session(hass),
+        email=data[CONF_EMAIL],
+        password=data[CONF_PASSWORD],
+        login=login,
+        dashboard_session=data.get(CONF_SESSION),
+        on_login=store_login,
     )
-
-    coordinator = IQAirDataUpdateCoordinator(
-        hass, api=api_client, device_id=entry.data["device_id"]
-    )
-
-    hass.data[DOMAIN][entry.entry_id] = {
-        "api_client": api_client,
-        "coordinator": coordinator,
-    }
-
+    coordinator = IQAirCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
+    entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    entry.add_update_listener(update_listener)
-
-    async def async_close_clients() -> None:
-        """Close the httpx clients."""
-        await command_client.aclose()
-        await state_client.aclose()
-
-    entry.async_on_unload(async_close_clients)
-
+    # Find out about an expired dashboard session before an automation trips over it.
+    entry.async_on_unload(
+        async_track_time_interval(hass, coordinator.async_check_session, SESSION_CHECK_INTERVAL)
+    )
+    entry.async_create_task(hass, coordinator.async_check_session(), "iqair_cloud session check")
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-    return unload_ok
+async def async_unload_entry(hass: HomeAssistant, entry: IQAirConfigEntry) -> bool:
+    """Unload an IQAir account."""
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Handle options update."""
-    await hass.config_entries.async_reload(entry.entry_id)
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Refuse entries made by the 1.x versions, which stored tokens that no longer exist."""
+    if entry.version < 2:
+        _LOGGER.error(
+            "The IQAir Cloud entry '%s' was created by an older version that used an API "
+            "IQAir has shut down. Delete it and add the integration again",
+            entry.title,
+        )
+        return False
+    return True
