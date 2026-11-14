@@ -1,7 +1,7 @@
 """IQAir Cloud integration for Home Assistant.
 
-Forked from ThioJoe/HA-IQAir-Integration (AGPL-3.0) and rewritten for the cloud API
-IQAir has served since late October 2026. See protocol.py for how that API works.
+Version 2 was rewritten for the cloud API IQAir has served since late October 2026.
+See protocol.py for how that API works.
 """
 from __future__ import annotations
 

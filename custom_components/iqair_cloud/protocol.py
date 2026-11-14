@@ -20,8 +20,8 @@ State of the service, measured on 2026-11-14:
 * The old gRPC command API (cloud-api.iqair.io) still exists but needs an app token
   the dashboard stopped publishing, and it rejects the sign-in's loginToken.
 
-The device-state field names and the numeric power/profile codes were first worked out
-by ThioJoe/HA-IQAir-Integration (AGPL-3.0), which this integration is forked from.
+The device-state field names and the numeric power/profile codes come from the 1.x
+versions of this integration.
 """
 from __future__ import annotations
 

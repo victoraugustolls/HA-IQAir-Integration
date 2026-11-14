@@ -1,11 +1,14 @@
 {
   "domain": "iqair_cloud",
   "name": "IQAir Cloud",
-  "codeowners": [],
+  "codeowners": [
+    "@ThioJoe"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/ThioJoe/HA-IQAir-Integration",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/ThioJoe/HA-IQAir-Integration/issues",
   "requirements": [],
   "version": "2.0.0"
 }
