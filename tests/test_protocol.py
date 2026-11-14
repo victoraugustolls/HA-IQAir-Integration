@@ -8,7 +8,7 @@ replaced).
 Where an expectation comes from is marked on each test:
   [captured]   seen in a real response from IQAir
   [dashboard]  taken from the dashboard's own JavaScript, never seen on the wire
-  [upstream]   taken from this integration's 1.x code or from hmk/iqair-matter
+  [upstream]   taken from ThioJoe/HA-IQAir-Integration or hmk/iqair-matter
 """
 import importlib.util
 import json

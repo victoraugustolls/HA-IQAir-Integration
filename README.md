@@ -2,10 +2,10 @@
 
 Read and control IQAir air purifiers from Home Assistant through IQAir's cloud.
 
-Version 2 is a rewrite. IQAir replaced its dashboard in late October 2026 and the login
-flow of the 1.x versions stopped working (issue #7), so this version reads and controls
-purifiers a different way. Entries created by 1.x cannot be migrated: delete them and add
-the integration again.
+This is a fork of [ThioJoe/HA-IQAir-Integration](https://github.com/ThioJoe/HA-IQAir-Integration),
+rewritten after IQAir replaced its dashboard in late October 2026 and the original login
+flow stopped working (upstream issue #7). The device-state field names and the numeric
+power and profile codes come from ThioJoe's work. Licensed AGPL-3.0, like the original.
 
 **This uses undocumented IQAir APIs. It can break whenever IQAir changes them.**
 
@@ -54,8 +54,8 @@ The session cookie is a full login to your IQAir account, not a limited API toke
 
 ### HACS (custom repository)
 
-1. HACS → menu → **Custom repositories**. Add `ThioJoe/HA-IQAir-Integration` with type
-   **Integration**.
+1. HACS → menu → **Custom repositories**. Add `victoraugustolls/HA-IQAir-Integration`
+   with type **Integration**.
 2. Install **IQAir Cloud Integration**, then restart Home Assistant.
 
 ### Manual
